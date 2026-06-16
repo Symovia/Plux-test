@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>生理信号艺术可视化 — jie</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "Segoe UI", "Microsoft YaHei", monospace;
+      background: #050608; color: #d4d4d4;
+      overflow: hidden; height: 100vh;
+    }
+
+    #stage {
+      position: fixed; inset: 0;
+      display: grid;
+      grid-template-rows: 56px 1fr 90px;
+    }
+
+    /* Top bar */
+    .top {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.5rem;
+      background: rgba(15, 17, 23, 0.7);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #1a1d24;
+      z-index: 10;
+    }
+    .title { font-size: 0.95rem; color: #888; letter-spacing: 0.05em; }
+    .conds { display: flex; gap: 0.4rem; }
+    .conds button {
+      padding: 0.4rem 1rem;
+      background: transparent; color: #888;
+      border: 1px solid #333; border-radius: 4px;
+      font-family: inherit; font-size: 0.85rem;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .conds button:hover { color: white; border-color: #666; }
+    .conds button.active.stable { background: #10b981; color: white; border-color: #10b981; }
+    .conds button.active.middle { background: #f59e0b; color: white; border-color: #f59e0b; }
+    .conds button.active.mess   { background: #ef4444; color: white; border-color: #ef4444; }
+
+    /* Main area */
+    .main {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 280px;
+    }
+    canvas#viz {
+      width: 100%; height: 100%;
+      display: block;
+      background: radial-gradient(ellipse at center, #0a0c11 0%, #050608 100%);
+    }
+
+    /* Side panel: 5 mini gauges */
+    .panel {
+      background: rgba(10, 12, 17, 0.65);
+      backdrop-filter: blur(10px);
+      border-left: 1px solid #1a1d24;
+      padding: 1rem 1.1rem;
+      display: flex; flex-direction: column; gap: 0.85rem;
+    }
+    .gauge { display: flex; flex-direction: column; gap: 4px; }
+    .gauge .label {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-size: 0.8rem; color: #888;
+    }
+    .gauge .label .num {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 1.4rem; font-weight: 700; color: #d4d4d4;
+    }
+    .gauge .name { font-size: 0.78rem; }
+    .gauge .bar {
+      height: 6px; background: #1a1d24; border-radius: 3px;
+      overflow: hidden;
+    }
+    .gauge .fill {
+      height: 100%; transition: width 0.3s, background 0.3s;
+      border-radius: 3px;
+    }
+    .gauge .spark {
+      width: 100%; height: 26px;
+    }
+
+    /* Bottom timeline */
+    .bottom {
+      background: rgba(15, 17, 23, 0.8);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid #1a1d24;
+      padding: 0.7rem 1.5rem;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 1rem; align-items: center;
+    }
+    .btn {
+      background: transparent; border: 1px solid #333; color: #aaa;
+      border-radius: 4px; padding: 0.4rem 0.8rem; cursor: pointer;
+      font-family: inherit; font-size: 0.85rem; min-width: 70px;
+      transition: all 0.2s;
+    }
+    .btn:hover { color: white; border-color: #666; }
+    .time-row { display: flex; align-items: center; gap: 0.8rem; }
+    input[type=range] {
+      width: 100%; height: 6px;
+      accent-color: #6ee7b7;
+    }
+    .meta { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; color: #888; }
+    .speed select {
+      background: #1a1d24; color: #d4d4d4;
+      border: 1px solid #333; border-radius: 4px;
+      padding: 0.3rem 0.5rem;
+      font-family: inherit;
+    }
+
+    /* Subtle gradient hint */
+    .hint {
+      position: absolute; bottom: 12px; left: 12px;
+      font-size: 0.72rem; color: #555;
+      font-family: ui-monospace, Consolas, monospace;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div id="stage">
+
+  <div class="top">
+    <div class="title">生理信号艺术可视化 · 5 通道动画 · jie</div>
+    <div class="conds" id="conds"></div>
+  </div>
+
+  <div class="main">
+    <canvas id="viz"></canvas>
+    <div class="hint" id="hint">背景 = 疲劳 · 形状边缘 = 专注 · 色相 = 心脏年龄 · 弧线流畅 = 协调 · 弹动 = 弹性</div>
+
+    <div class="panel" id="panel">
+      <!-- gauges injected by JS -->
+    </div>
+  </div>
+
+  <div class="bottom">
+    <button class="btn" id="playBtn">▶ Play</button>
+    <div class="time-row">
+      <input type="range" id="scrub" min="0" max="300" value="0">
+    </div>
+    <div class="meta" id="timeText">t = 0 s / 300 s</div>
+    <div class="speed">
+      速度
+      <select id="speed">
+        <option value="0.25">0.25×</option>
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+        <option value="4">4×</option>
+      </select>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============== Data + state ==============
+const METRICS = [
+  { key: 'fatigue',    name: '① 疲劳度',      min: 0,  max: 100, color: '#a78bfa' },
+  { key: 'focus',      name: '② 专注度',      min: 0,  max: 100, color: '#22d3ee' },
+  { key: 'heart_age',  name: '③ 心脏年龄',    min: 0,  max: 50,  color: '#f472b6' },
+  { key: 'coherence',  name: '④ 协调度',      min: 0,  max: 100, color: '#86efac' },
+  { key: 'resilience', name: '⑤ 弹性',        min: 0,  max: 100, color: '#fcd34d' },
+];
+
+const COND_COLORS = {
+  stable: '#10b981',
+  middle: '#f59e0b',
+  mess:   '#ef4444',
+};
+const COND_CN = { stable: '平静', middle: '心事', mess: '焦虑' };
+
+let currentCond = 'stable';
+let tracks = null;        // array of {t_sec, fatigue, focus, ...}
+let currentIdx = 0;
+let playing = false;
+let speed = 1.0;
+
+// ============== Build gauges ==============
+const panel = document.getElementById('panel');
+const gaugeEls = {};
+METRICS.forEach(m => {
+  const div = document.createElement('div');
+  div.className = 'gauge';
+  div.innerHTML = `
+    <div class="label">
+      <span class="name" style="color:${m.color}">${m.name}</span>
+      <span class="num" id="num-${m.key}">--</span>
+    </div>
+    <div class="bar"><div class="fill" id="fill-${m.key}" style="background:${m.color}; width:0%"></div></div>
+    <canvas class="spark" id="spark-${m.key}"></canvas>
+  `;
+  panel.appendChild(div);
+  gaugeEls[m.key] = {
+    num: document.getElementById(`num-${m.key}`),
+    fill: document.getElementById(`fill-${m.key}`),
+    spark: document.getElementById(`spark-${m.key}`),
+  };
+});
+
+// ============== Condition buttons ==============
+const condEl = document.getElementById('conds');
+async function loadConditions() {
+  const r = await fetch('/api/conditions').then(r => r.json());
+  for (const c of r.conditions) {
+    const b = document.createElement('button');
+    b.textContent = `${c} · ${COND_CN[c] || c}`;
+    b.dataset.cond = c;
+    b.addEventListener('click', () => switchCond(c));
+    condEl.appendChild(b);
+  }
+  switchCond(r.conditions[0]);
+}
+
+async function switchCond(c) {
+  currentCond = c;
+  for (const btn of condEl.children) {
+    btn.classList.remove('active', 'stable', 'middle', 'mess');
+    if (btn.dataset.cond === c) {
+      btn.classList.add('active', c);
+    }
+  }
+  const r = await fetch(`/api/tracks/${c}`).then(r => r.json());
+  tracks = r.data;
+  document.getElementById('scrub').max = tracks.length - 1;
+  currentIdx = 0;
+  render();
+}
+
+// ============== Canvas viz ==============
+const canvas = document.getElementById('viz');
+const ctx = canvas.getContext('2d');
+
+function fitCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const r = canvas.getBoundingClientRect();
+  canvas.width = r.width * dpr;
+  canvas.height = r.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', fitCanvas);
+fitCanvas();
+
+let tFrame = 0;
+let particles = [];
+function initParticles(n) {
+  particles = [];
+  for (let i = 0; i < n; i++) {
+    particles.push({
+      angle: Math.random() * Math.PI * 2,
+      radius: 150 + Math.random() * 150,
+      speed: 0.001 + Math.random() * 0.005,
+      size: 1 + Math.random() * 2,
+      offset: Math.random(),
+    });
+  }
+}
+initParticles(120);
+
+function drawScene(vals) {
+  const w = canvas.width / (window.devicePixelRatio || 1);
+  const h = canvas.height / (window.devicePixelRatio || 1);
+  const cx = w / 2, cy = h / 2;
+
+  // Background overlay — fatigue darkens
+  ctx.fillStyle = `rgba(5, 6, 8, ${0.15 + vals.fatigue / 250})`;
+  ctx.fillRect(0, 0, w, h);
+
+  // Color hue from heart age (15yr → 320 pink, 40yr → 200 blue)
+  const ageNorm = Math.max(0, Math.min(1, (vals.heart_age - 10) / 35));
+  const hue = 330 - ageNorm * 130;  // 330 (warm) → 200 (cool)
+  const sat = 70 + vals.coherence * 0.2;
+  const lit = 50 - vals.fatigue * 0.15;
+
+  // === Particles (orbital) ===
+  const resilience = vals.resilience / 100;
+  for (const p of particles) {
+    p.angle += p.speed * (0.5 + resilience * 0.8);
+    const wobble = (100 - vals.coherence) / 100;
+    const r = p.radius + Math.sin(tFrame * 0.04 + p.offset * 10) * 20 * (1 + wobble * 2);
+    const px = cx + Math.cos(p.angle) * r;
+    const py = cy + Math.sin(p.angle) * r;
+    ctx.fillStyle = `hsla(${hue}, ${sat}%, ${lit + 20}%, 0.35)`;
+    ctx.beginPath();
+    ctx.arc(px, py, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // === Central blob ===
+  // Polar morphing organism
+  const baseR = 90 + vals.resilience * 0.6;
+  const wobble = (100 - vals.coherence) / 100;
+  const petals = 3 + Math.floor(vals.focus / 18);  // 3-8 petals
+  const edgeSharp = vals.focus / 100;
+  const breathe = Math.sin(tFrame * 0.025) * 15;
+
+  ctx.beginPath();
+  for (let i = 0; i <= 360; i += 1) {
+    const a = i * Math.PI / 180;
+    const noise =
+      wobble * 35 * Math.sin(a * petals + tFrame * 0.05) +
+      wobble * 15 * Math.sin(a * (petals * 2) + tFrame * 0.08) +
+      (1 - edgeSharp) * 10 * Math.sin(a * 13 + tFrame * 0.12);
+    const r = baseR + breathe + noise;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+
+  // Filled with radial gradient
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR * 1.8);
+  grad.addColorStop(0,   `hsla(${hue}, ${sat}%, ${lit + 20}%, 0.85)`);
+  grad.addColorStop(0.5, `hsla(${hue}, ${sat}%, ${lit}%, 0.45)`);
+  grad.addColorStop(1,   `hsla(${hue}, ${sat}%, ${lit - 10}%, 0)`);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Outline (sharpness based on focus)
+  ctx.lineWidth = 1 + edgeSharp * 2;
+  ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${Math.min(lit + 30, 80)}%, ${0.3 + edgeSharp * 0.5})`;
+  ctx.stroke();
+
+  // Inner pulsing core (heart rate proxy: hardcoded breathing pulse)
+  const coreR = 30 + Math.sin(tFrame * 0.15) * 6;
+  const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+  coreGrad.addColorStop(0, `hsla(${hue}, 100%, 80%, 0.9)`);
+  coreGrad.addColorStop(1, `hsla(${hue}, ${sat}%, ${lit}%, 0)`);
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ============== Sparklines ==============
+function drawSparkline(canvasEl, values, color, min, max) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvasEl.clientWidth, h = canvasEl.clientHeight;
+  canvasEl.width = w * dpr;
+  canvasEl.height = h * dpr;
+  const c = canvasEl.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, w, h);
+  if (!values || values.length < 2) return;
+  c.strokeStyle = color;
+  c.lineWidth = 1.2;
+  c.beginPath();
+  values.forEach((v, i) => {
+    const x = (i / (values.length - 1)) * w;
+    const y = h - ((v - min) / (max - min)) * h;
+    if (i === 0) c.moveTo(x, y);
+    else c.lineTo(x, y);
+  });
+  c.stroke();
+  // Current point
+  const lastV = values[values.length - 1];
+  const lastY = h - ((lastV - min) / (max - min)) * h;
+  c.fillStyle = color;
+  c.beginPath();
+  c.arc(w - 2, lastY, 2.5, 0, Math.PI * 2);
+  c.fill();
+}
+
+function updateGauges(vals, idx) {
+  METRICS.forEach(m => {
+    const v = vals[m.key];
+    const el = gaugeEls[m.key];
+    el.num.textContent = m.key === 'heart_age' ? `${v.toFixed(1)}岁` : v.toFixed(1);
+    const pct = ((v - m.min) / (m.max - m.min)) * 100;
+    el.fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    // Sparkline = last 60 sec
+    const start = Math.max(0, idx - 60);
+    const slice = tracks.slice(start, idx + 1).map(d => d[m.key]);
+    drawSparkline(el.spark, slice, m.color, m.min, m.max);
+  });
+}
+
+// ============== Render loop ==============
+function render() {
+  if (!tracks) return;
+  const idx = Math.max(0, Math.min(tracks.length - 1, currentIdx));
+  const vals = tracks[idx];
+  drawScene(vals);
+  updateGauges(vals, idx);
+  document.getElementById('scrub').value = idx;
+  document.getElementById('timeText').textContent = `t = ${vals.t_sec} s / ${tracks[tracks.length - 1].t_sec} s`;
+}
+
+let lastTs = 0;
+function loop(ts) {
+  tFrame++;
+  if (playing && tracks) {
+    const dt = (ts - lastTs) / 1000;
+    if (dt > 0.1) lastTs = ts;
+    currentIdx += speed * (dt / 1) * 1;  // advance ~speed*60 per sec at 60fps
+    lastTs = ts;
+    if (currentIdx >= tracks.length) {
+      currentIdx = 0;  // loop
+    }
+  }
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ============== Controls ==============
+document.getElementById('playBtn').addEventListener('click', () => {
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+  lastTs = performance.now();
+});
+document.getElementById('scrub').addEventListener('input', (e) => {
+  currentIdx = parseFloat(e.target.value);
+});
+document.getElementById('speed').addEventListener('change', (e) => {
+  speed = parseFloat(e.target.value);
+});
+
+loadConditions();
+</script>
+</body>
+</html>

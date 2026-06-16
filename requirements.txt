@@ -1,0 +1,25 @@
+# Core scientific
+numpy>=2.0
+scipy>=1.13
+pandas>=2.0
+matplotlib>=3.9
+scikit-learn>=1.5
+joblib>=1.4
+
+# Biosignal processing
+biosppy>=2.1
+PyWavelets>=1.6
+h5py>=3.10
+statsmodels>=0.14
+seaborn>=0.13
+
+# Optional viz
+bokeh>=3.5
+
+# Web (acquisition dashboard + art viz server)
+fastapi>=0.115
+uvicorn[standard]>=0.30
+
+# Note: PLUX Python API (.pyd) is NOT installable via pip.
+# Get it from https://github.com/pluxbiosignals/python-samples
+# and either copy PLUX-API-Python3/ here, or set $env:PLUX_API_DIR

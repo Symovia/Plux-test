@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd                  # PLUX 二进制(版权 + 平台依赖,从官方拿)
+*.so
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# PLUX SDK(从官方 git clone,不放仓库)
+PLUX-API-Python3/
+*.dll
+
+# 采集时产生的本地 CSV(不污染仓库)
+captures/
+
+# 分析脚本生成的中间产物
+output/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Jupyter
+.ipynb_checkpoints/

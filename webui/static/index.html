@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>PLUX 压力监控仪表盘</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      margin: 0; padding: 1rem 1.5rem;
+      background: #0f1116; color: #ddd;
+    }
+    h1 { margin: 0 0 1rem; font-size: 1.3rem; color: #ccc; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Left panel: stress traffic light + score */
+    .stress-panel {
+      background: #1a1d24;
+      border: 1px solid #262932;
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+    .traffic-light {
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      padding: 0.5rem;
+    }
+    .led {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: #2a2d34;
+      border: 3px solid #333;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .led-label {
+      position: absolute;
+      bottom: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.78rem;
+      color: #888;
+      white-space: nowrap;
+    }
+    .led.green.on  { background: #10b981; border-color: #6ee7b7; box-shadow: 0 0 25px rgba(16,185,129,0.6); }
+    .led.amber.on  { background: #f59e0b; border-color: #fbbf24; box-shadow: 0 0 25px rgba(245,158,11,0.6); }
+    .led.red.on    { background: #ef4444; border-color: #fca5a5; box-shadow: 0 0 25px rgba(239,68,68,0.6); }
+    .led.green.on .led-label,
+    .led.amber.on .led-label,
+    .led.red.on .led-label   { color: white; font-weight: 600; }
+
+    .score-row {
+      text-align: center;
+      padding-top: 1.2rem;
+    }
+    .score-number {
+      font-size: 3.2rem; font-weight: 700;
+      font-family: ui-monospace, Consolas, monospace;
+      line-height: 1;
+    }
+    .score-number.gray  { color: #666; }
+    .score-number.green { color: #6ee7b7; }
+    .score-number.amber { color: #fbbf24; }
+    .score-number.red   { color: #fca5a5; }
+    .score-label { color: #888; font-size: 0.9rem; margin-top: 0.3rem; }
+
+    .score-bar {
+      height: 14px; border-radius: 7px;
+      background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+      position: relative;
+      overflow: visible;
+    }
+    .score-bar::after {
+      content: ""; position: absolute;
+      top: -6px; width: 4px; height: 26px;
+      background: white; border-radius: 2px;
+      left: calc(var(--score, 0) * 1% - 2px);
+      box-shadow: 0 0 6px black;
+      transition: left 0.3s;
+    }
+    .prob-bars { display: grid; gap: 0.3rem; }
+    .prob-row {
+      display: grid;
+      grid-template-columns: 60px 1fr 50px;
+      align-items: center; gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .prob-track {
+      height: 10px; background: #262932; border-radius: 5px; overflow: hidden;
+    }
+    .prob-fill { height: 100%; border-radius: 5px; transition: width 0.3s; }
+
+    /* Right panel: respiration banner */
+    .resp-panel {
+      background: #1a1d24;
+      border: 1px solid #262932;
+      border-radius: 10px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1rem;
+    }
+    .banner {
+      padding: 1.2rem; border-radius: 8px;
+      text-align: center;
+      font-size: 1.4rem; font-weight: 700;
+      transition: all 0.3s;
+    }
+    .banner.gray  { background: #2a2d34; color: #888; border: 2px solid #444; }
+    .banner.green { background: #143626; color: #6ee7b7; border: 2px solid #34d399; }
+    .banner.red   { background: #4a1414; color: #fca5a5; border: 2px solid #ef4444; }
+
+    .controls {
+      display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap;
+    }
+    button {
+      padding: 0.55rem 1.3rem; font-size: 1rem; font-weight: 600;
+      border: none; border-radius: 6px; cursor: pointer;
+      background: #3b82f6; color: white;
+    }
+    button:hover:not(:disabled) { background: #2563eb; }
+    button:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .meta { font-family: ui-monospace, Consolas, monospace; color: #888; font-size: 0.88rem; }
+    progress { width: 220px; height: 1.2rem; accent-color: #3b82f6; }
+    a.dl {
+      color: #6ee7b7; text-decoration: none; font-weight: 600;
+      padding: 0.4rem 0.9rem; background: #143626;
+      border-radius: 6px; border: 1px solid #34d399;
+    }
+
+    .charts { display: grid; gap: 0.5rem; }
+    .chart-row {
+      background: #1a1d24; border-radius: 6px;
+      border: 1px solid #262932; padding: 0.3rem;
+    }
+
+    /* Threshold card */
+    .threshold-panel {
+      background: #1a1d24;
+      border: 1px solid #262932;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .threshold-title {
+      font-weight: 600; color: #ccc;
+      margin-bottom: 0.6rem; font-size: 0.95rem;
+    }
+    table.thr {
+      width: 100%; border-collapse: collapse;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.85rem;
+    }
+    table.thr th, table.thr td {
+      padding: 0.35rem 0.7rem; border-bottom: 1px solid #262932;
+      text-align: right;
+    }
+    table.thr th:first-child, table.thr td:first-child { text-align: left; color: #888; }
+    table.thr tr.stable td { color: #6ee7b7; }
+    table.thr tr.middle td { color: #fbbf24; }
+    table.thr tr.mess td   { color: #fca5a5; }
+  </style>
+</head>
+<body>
+  <h1>PLUX 压力监控仪表盘 — RIP / ECG / EDA @ 1000 Hz · 60 秒滑动窗口分类</h1>
+
+  <div class="dashboard">
+    <!-- LEFT: stress -->
+    <div class="stress-panel">
+      <div style="text-align:center; color:#888; font-size:0.85rem;">压力状态</div>
+      <div class="traffic-light">
+        <div class="led green" id="led-stable"><span class="led-label">平静</span></div>
+        <div class="led amber" id="led-middle"><span class="led-label">心事</span></div>
+        <div class="led red" id="led-mess"><span class="led-label">焦虑</span></div>
+      </div>
+      <div class="score-row" style="margin-top:1rem;">
+        <div class="score-number gray" id="score-num">--</div>
+        <div class="score-label">压力分 0 – 100</div>
+      </div>
+      <div class="score-bar" id="score-bar" style="--score:0"></div>
+      <div class="prob-bars" id="prob-bars">
+        <div class="prob-row"><span style="color:#6ee7b7;">平静</span><div class="prob-track"><div class="prob-fill" id="prob-stable" style="background:#10b981; width:0%;"></div></div><span id="prob-stable-v">0%</span></div>
+        <div class="prob-row"><span style="color:#fbbf24;">心事</span><div class="prob-track"><div class="prob-fill" id="prob-middle" style="background:#f59e0b; width:0%;"></div></div><span id="prob-middle-v">0%</span></div>
+        <div class="prob-row"><span style="color:#fca5a5;">焦虑</span><div class="prob-track"><div class="prob-fill" id="prob-mess"   style="background:#ef4444; width:0%;"></div></div><span id="prob-mess-v">0%</span></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: respiration + controls -->
+    <div class="resp-panel">
+      <div class="banner gray" id="banner">等待开始</div>
+      <div class="controls">
+        <button id="startBtn">▶ Start</button>
+        <progress id="prog" value="0" max="300000"></progress>
+        <span class="meta" id="meta">0:00 / 5:00</span>
+        <a id="download" class="dl" href="/download" style="display:none;">⬇ 下载 CSV</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Personal thresholds -->
+  <div class="threshold-panel">
+    <div class="threshold-title">个人化阈值参考(基于 jie 的 stable/middle/mess 75 个窗口的 p10–p90 分位)</div>
+    <table class="thr" id="thr-table">
+      <thead><tr><th>状态</th><th>SCL (µS)</th><th>SCR /min</th><th>HR (bpm)</th><th>呼吸 CV</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="charts">
+    <div class="chart-row"><div id="rip" style="height:160px;"></div></div>
+    <div class="chart-row"><div id="ecg" style="height:160px;"></div></div>
+    <div class="chart-row"><div id="eda" style="height:160px;"></div></div>
+  </div>
+
+<script>
+  const TARGET = 300000;
+  const SR_UI = 100;
+  const WINDOW_SEC = 10;
+  const WINDOW_N = WINDOW_SEC * SR_UI;
+  const buf = { t: [], rip: [], ecg: [], eda: [] };
+
+  // Charts
+  const baseLayout = (ylabel, color) => ({
+    margin: { t: 6, r: 14, b: 24, l: 56 },
+    paper_bgcolor: '#1a1d24', plot_bgcolor: '#0f1116',
+    font: { color: '#bbb', size: 11, family: 'ui-monospace, Consolas, monospace' },
+    xaxis: { gridcolor: '#262932', zeroline: false },
+    yaxis: { gridcolor: '#262932', zeroline: false, title: ylabel, titlefont: { color } },
+    showlegend: false,
+  });
+  const mkTrace = (color) => ({ x: [], y: [], type: 'scattergl', mode: 'lines', line: { color, width: 1 } });
+  const cfg = { displayModeBar: false, responsive: true };
+  Plotly.newPlot('rip', [mkTrace('#60a5fa')], baseLayout('RIP', '#60a5fa'), cfg);
+  Plotly.newPlot('ecg', [mkTrace('#f87171')], baseLayout('ECG', '#f87171'), cfg);
+  Plotly.newPlot('eda', [mkTrace('#6ee7b7')], baseLayout('EDA', '#6ee7b7'), cfg);
+
+  const banner = document.getElementById('banner');
+  const prog = document.getElementById('prog');
+  const meta = document.getElementById('meta');
+  const startBtn = document.getElementById('startBtn');
+  const dl = document.getElementById('download');
+
+  const leds = { stable: document.getElementById('led-stable'), middle: document.getElementById('led-middle'), mess: document.getElementById('led-mess') };
+  const scoreNum = document.getElementById('score-num');
+  const scoreBar = document.getElementById('score-bar');
+  const probEl = (c) => ({ bar: document.getElementById(`prob-${c}`), val: document.getElementById(`prob-${c}-v`) });
+
+  function fmtTime(s) { const x = Math.floor(s/1000); return `${Math.floor(x/60)}:${(x%60).toString().padStart(2,'0')}`; }
+  function updateMeta(s) { prog.value = Math.min(s, TARGET); meta.textContent = `${fmtTime(s)} / 5:00`; }
+  function setBanner(t, c) { banner.textContent = t; banner.className = `banner ${c}`; }
+  function pushData(samples) {
+    for (const [n, v] of samples) {
+      buf.t.push(n/1000); buf.rip.push(v[0]); buf.ecg.push(v[1]); buf.eda.push(v[2]);
+    }
+    const ex = buf.t.length - WINDOW_N;
+    if (ex > 0) { buf.t.splice(0,ex); buf.rip.splice(0,ex); buf.ecg.splice(0,ex); buf.eda.splice(0,ex); }
+  }
+  function redraw() {
+    if (!buf.t.length) return;
+    Plotly.update('rip', { x: [buf.t], y: [buf.rip] });
+    Plotly.update('ecg', { x: [buf.t], y: [buf.ecg] });
+    Plotly.update('eda', { x: [buf.t], y: [buf.eda] });
+  }
+  function updateStress(m) {
+    // LEDs
+    for (const c of ['stable','middle','mess']) leds[c].classList.remove('on');
+    leds[m.class].classList.add('on');
+    // Score
+    scoreNum.textContent = m.score.toFixed(0);
+    scoreNum.className = `score-number ${m.color}`;
+    scoreBar.style.setProperty('--score', m.score);
+    // Probs
+    for (const c of ['stable','middle','mess']) {
+      const e = probEl(c);
+      const p = (m.probs[c] || 0) * 100;
+      e.bar.style.width = p + '%';
+      e.val.textContent = p.toFixed(0) + '%';
+    }
+  }
+  function clearStress() {
+    for (const c of ['stable','middle','mess']) leds[c].classList.remove('on');
+    scoreNum.textContent = '--';
+    scoreNum.className = 'score-number gray';
+    scoreBar.style.setProperty('--score', 0);
+    for (const c of ['stable','middle','mess']) {
+      const e = probEl(c);
+      e.bar.style.width = '0%'; e.val.textContent = '0%';
+    }
+  }
+
+  // Load thresholds
+  fetch('/thresholds').then(r => r.json()).then(thr => {
+    const tbody = document.querySelector('#thr-table tbody');
+    const map = { stable: '平静', middle: '心事', mess: '焦虑' };
+    for (const c of ['stable','middle','mess']) {
+      const t = thr[c];
+      if (!t) continue;
+      const tr = document.createElement('tr');
+      tr.className = c;
+      tr.innerHTML = `
+        <td>${c} (${map[c]})</td>
+        <td>${t.SCL_mean.p10.toFixed(2)} – ${t.SCL_mean.p90.toFixed(2)}</td>
+        <td>${t.SCR_rate.p10.toFixed(0)} – ${t.SCR_rate.p90.toFixed(0)}</td>
+        <td>${t.mean_HR.p10.toFixed(0)} – ${t.mean_HR.p90.toFixed(0)}</td>
+        <td>${t.resp_CV.p10.toFixed(2)} – ${t.resp_CV.p90.toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+
+  let ws = null;
+  let redrawTimer = null;
+
+  startBtn.addEventListener('click', async () => {
+    startBtn.disabled = true;
+    dl.style.display = 'none';
+    buf.t.length = 0; buf.rip.length = 0; buf.ecg.length = 0; buf.eda.length = 0;
+    clearStress();
+    setBanner('正在连接设备...', 'gray');
+
+    try {
+      const r = await fetch('/start', { method: 'POST' });
+      const j = await r.json();
+      if (!j.ok) {
+        setBanner('启动失败:' + (j.msg || ''), 'red');
+        startBtn.disabled = false;
+        return;
+      }
+    } catch (e) {
+      setBanner('启动失败:' + e, 'red');
+      startBtn.disabled = false;
+      return;
+    }
+
+    ws = new WebSocket(`ws://${location.host}/ws`);
+    ws.onmessage = (evt) => {
+      const m = JSON.parse(evt.data);
+      switch (m.type) {
+        case 'data':
+          pushData(m.samples);
+          if (m.samples.length) updateMeta(m.samples[m.samples.length-1][0]);
+          break;
+        case 'resp': setBanner(m.text, m.color); break;
+        case 'stress': updateStress(m); break;
+        case 'ping': updateMeta(m.samples); break;
+        case 'done':
+          setBanner('✅ 采集完成 — CSV 已保存', 'green');
+          dl.href = '/download'; dl.style.display = 'inline-block';
+          if (redrawTimer) { clearInterval(redrawTimer); redrawTimer = null; }
+          redraw();
+          startBtn.disabled = false;
+          break;
+        case 'error':
+          setBanner('❌ 错误:' + m.msg, 'red');
+          if (redrawTimer) { clearInterval(redrawTimer); redrawTimer = null; }
+          startBtn.disabled = false;
+          break;
+      }
+    };
+    ws.onerror = () => setBanner('WebSocket 错误', 'red');
+    redrawTimer = setInterval(redraw, 200);
+  });
+</script>
+</body>
+</html>
