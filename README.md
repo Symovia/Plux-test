@@ -123,5 +123,5 @@ PLUX SDK files and examples, if downloaded separately into this repository, rema
 
 ## Acknowledgements
 
-- Participants **jie** and **ziqi** agreed to publish their anonymized physiological recordings.
+- Participants **ziqi** agreed to publish her anonymized physiological recording.
 - [PLUX Wireless Biosignals, S.A.](https://biosignalsplux.com/) provides the open-source API and examples used by this project.
