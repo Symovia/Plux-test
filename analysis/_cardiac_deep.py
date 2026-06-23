@@ -1,8 +1,8 @@
 """Deep cardiac feature extraction beyond plain HR/HRV-time-domain.
 
 Categories extracted from each 5-min ECG recording:
-  A. Time-domain HRV          (HR, SDNN, RMSSD, pNN50)         — reference
-  B. Frequency-domain HRV     (LF, HF, VLF, LF/HF, HFnu)       — reference
+  A. Time-domain HRV          (HR, SDNN, RMSSD, pNN50)         - reference
+  B. Frequency-domain HRV     (LF, HF, VLF, LF/HF, HFnu)       - reference
   C. Non-linear HRV           (SD1, SD2, SD1/SD2, SampEn, DFA-α1)
   D. Beat morphology          (R-amplitude mean/std/CV, QRS-width est.)
   E. ECG-derived respiration  (EDR via R-amplitude envelope)
@@ -33,12 +33,12 @@ OUT = REPO_ROOT / "output"
 OUT.mkdir(exist_ok=True)
 FS = 1000
 CONDS = ["stable", "middle", "mess"]
-CN = {"stable": "平静", "middle": "心事", "mess": "焦虑"}
+CN = {"stable": "Calm", "middle": "Concern", "mess": "Anxious"}
 COLORS = {"stable": "#10b981", "middle": "#f59e0b", "mess": "#ef4444"}
 FILE_ALIASES = {
-    "stable": ["stable.csv", "稳.csv"],
-    "middle": ["middle.csv", "中.csv"],
-    "mess":   ["mess.csv", "乱.csv"],
+    "stable": ["stable.csv"],
+    "middle": ["middle.csv"],
+    "mess":   ["mess.csv"],
 }
 
 
@@ -121,7 +121,7 @@ def poincare(rr):
 
 
 def sample_entropy(x, m=2, r=None):
-    """Sample entropy — autonomic complexity. Lower = more regular."""
+    """Sample entropy - autonomic complexity. Lower = more regular."""
     x = np.asarray(x, dtype=float)
     N = len(x)
     if N < m + 2:
@@ -257,7 +257,7 @@ def rhythm_quality(rr_all, rr_clean):
 
 # ============ Main ============
 def main():
-    print("Extracting deep cardiac features (5 min × 3 conditions)...")
+    print("Extracting deep cardiac features (5 min x 3 conditions)...")
     results = {}
     rows = []
     for c in CONDS:
@@ -304,11 +304,11 @@ def main():
     print("\n===== Deep cardiac summary =====\n")
     # Print in groups
     groups = {
-        "A 时间域 HRV": ["condition", "HR_bpm", "SDNN_ms", "RMSSD_ms", "pNN50_pct"],
-        "B 频域 HRV": ["condition", "VLF", "LF", "HF", "LF_HF", "LFnu", "HFnu"],
-        "C 非线性 HRV": ["condition", "SD1_ms", "SD2_ms", "SD1_SD2_ratio", "SampEn", "DFA_a1"],
-        "D 波形形态": ["condition", "R_amp_mean", "R_amp_std", "R_amp_CV", "QRS_width_mean_ms", "QRS_width_std_ms"],
-        "E 衍生呼吸 vs F 自主指数 G 心律": ["condition", "EDR_corr_with_RIP", "CVI", "CSI", "ectopic_rejected", "ectopic_pct", "large_jumps"],
+        "A Time-domain HRV": ["condition", "HR_bpm", "SDNN_ms", "RMSSD_ms", "pNN50_pct"],
+        "B Frequency-domain HRV": ["condition", "VLF", "LF", "HF", "LF_HF", "LFnu", "HFnu"],
+        "C Nonlinear HRV": ["condition", "SD1_ms", "SD2_ms", "SD1_SD2_ratio", "SampEn", "DFA_a1"],
+        "D Beat morphology": ["condition", "R_amp_mean", "R_amp_std", "R_amp_CV", "QRS_width_mean_ms", "QRS_width_std_ms"],
+        "E Derived respiration vs F autonomic indices and G rhythm": ["condition", "EDR_corr_with_RIP", "CVI", "CSI", "ectopic_rejected", "ectopic_pct", "large_jumps"],
     }
     for name, cols in groups.items():
         print(f"--- {name} ---")
@@ -356,16 +356,16 @@ def main():
                label=f"{c} ({CN[c]})")
     ax.set_xticks(x)
     ax.set_xticklabels(metrics)
-    ax.set_title("非线性 HRV(复杂度 + 长程相关)", fontsize=10)
+    ax.set_title("Nonlinear HRV: complexity and long-range correlation", fontsize=10)
     ax.legend(fontsize=8)
     ax.grid(True, axis="y", alpha=0.3)
 
     # Row 2: Bars for SD1, SD2, CVI, CSI
     bar_metrics = [
-        ("SD1_ms", "SD1 (短时变异 ms)"),
-        ("SD2_ms", "SD2 (长时变异 ms)"),
-        ("CVI", "CVI 副交感(↑好)"),
-        ("CSI", "CSI 交感比(↑紧张)"),
+        ("SD1_ms", "SD1 (short-term variability ms)"),
+        ("SD2_ms", "SD2 (long-term variability ms)"),
+        ("CVI", "CVI parasympathetic, higher is better"),
+        ("CSI", "CSI sympathetic ratio, higher means more tension"),
     ]
     for col, (m, title) in enumerate(zip(range(4), bar_metrics)):
         ax = fig.add_subplot(gs[1, col])
@@ -380,7 +380,7 @@ def main():
                     f"{v:.2f}" if abs(v) < 10 else f"{v:.0f}",
                     ha="center", fontsize=9, fontweight="bold")
 
-    # Row 3: EDR (ECG-derived respiration) vs real RIP — overlay for one condition
+    # Row 3: EDR (ECG-derived respiration) vs real RIP - overlay for one condition
     show_c = "stable"
     ax = fig.add_subplot(gs[2, :3])
     res = results[show_c]
@@ -394,17 +394,17 @@ def main():
         rip_norm = rip_lp / (rip_lp.std() + 1e-9)
         edr_norm = res["edr_sig"] / (res["edr_sig"].std() + 1e-9)
         ax.plot(t_rip, rip_norm, color="#60a5fa", lw=1.2,
-                label="真实 RIP (z-scored)", alpha=0.85)
+                label="Real RIP (z-scored)", alpha=0.85)
         ax.plot(res["edr_t"], edr_norm, color="#f87171", lw=1.2,
-                label="ECG-derived 呼吸 (z-scored)", alpha=0.85)
+                label="ECG-derived respiration (z-scored)", alpha=0.85)
         ax.set_xlim(0, 60)
-        ax.set_xlabel("时间 (s) — 显示前 60 s")
-        ax.set_ylabel("归一化幅度")
+        ax.set_xlabel("Time (s) - first 60 s shown")
+        ax.set_ylabel("Normalized amplitude")
         corr = summary.loc[CONDS.index(show_c), "EDR_corr_with_RIP"]
         ax.set_title(
-            f"E. ECG 衍生呼吸 vs 真实 RIP — {show_c} ({CN[show_c]})  |  "
+            f"E. ECG-derived respiration vs Real RIP - {show_c} ({CN[show_c]})  |  "
             f"correlation = {corr:.2f}\n"
-            f"(意思:从心跳就能反推出呼吸波形,不靠 RIP 带也行)",
+            f"(Meaning: respiration can be inferred from heartbeat morphology without relying only on the RIP belt)",
             fontsize=11)
         ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3)
@@ -416,7 +416,7 @@ def main():
                   corrs, color=[COLORS[c] for c in CONDS])
     ax.set_ylim(-0.2, 1)
     ax.axhline(0, color="#666", lw=0.5)
-    ax.set_title("EDR ↔ RIP 相关性", fontsize=10)
+    ax.set_title("EDR <-> RIP correlation", fontsize=10)
     ax.grid(True, axis="y", alpha=0.3)
     for b, v in zip(bars, corrs):
         if v is None:
@@ -425,7 +425,7 @@ def main():
                 f"{v:.2f}", ha="center", fontsize=10, fontweight="bold")
 
     fig.suptitle(
-        "心跳信号深度挖掘 — 5 类特征(非线性 HRV / 波形 / EDR / 自主指数 / 心律质量)",
+        "Deep ECG feature mining - five feature groups: nonlinear HRV / morphology / EDR / autonomic indices / rhythm quality",
         fontsize=14, fontweight="bold")
     out_png = OUT / "jie_cardiac_deep.png"
     fig.savefig(out_png, dpi=110, bbox_inches="tight")

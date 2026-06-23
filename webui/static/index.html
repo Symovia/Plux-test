@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>PLUX 压力监控仪表盘</title>
+  <title>PLUX Stress Monitoring Dashboard</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
     body {
@@ -173,46 +173,46 @@
   </style>
 </head>
 <body>
-  <h1>PLUX 压力监控仪表盘 — RIP / ECG / EDA @ 1000 Hz · 60 秒滑动窗口分类</h1>
+  <h1>PLUX Stress Monitoring Dashboard - RIP / ECG / EDA @ 1000 Hz | 60-second rolling-window classifier</h1>
 
   <div class="dashboard">
     <!-- LEFT: stress -->
     <div class="stress-panel">
-      <div style="text-align:center; color:#888; font-size:0.85rem;">压力状态</div>
+      <div style="text-align:center; color:#888; font-size:0.85rem;">Stress state</div>
       <div class="traffic-light">
-        <div class="led green" id="led-stable"><span class="led-label">平静</span></div>
-        <div class="led amber" id="led-middle"><span class="led-label">心事</span></div>
-        <div class="led red" id="led-mess"><span class="led-label">焦虑</span></div>
+        <div class="led green" id="led-stable"><span class="led-label">Calm</span></div>
+        <div class="led amber" id="led-middle"><span class="led-label">Concern</span></div>
+        <div class="led red" id="led-mess"><span class="led-label">Anxious</span></div>
       </div>
       <div class="score-row" style="margin-top:1rem;">
         <div class="score-number gray" id="score-num">--</div>
-        <div class="score-label">压力分 0 – 100</div>
+        <div class="score-label">Stress score 0-100</div>
       </div>
       <div class="score-bar" id="score-bar" style="--score:0"></div>
       <div class="prob-bars" id="prob-bars">
-        <div class="prob-row"><span style="color:#6ee7b7;">平静</span><div class="prob-track"><div class="prob-fill" id="prob-stable" style="background:#10b981; width:0%;"></div></div><span id="prob-stable-v">0%</span></div>
-        <div class="prob-row"><span style="color:#fbbf24;">心事</span><div class="prob-track"><div class="prob-fill" id="prob-middle" style="background:#f59e0b; width:0%;"></div></div><span id="prob-middle-v">0%</span></div>
-        <div class="prob-row"><span style="color:#fca5a5;">焦虑</span><div class="prob-track"><div class="prob-fill" id="prob-mess"   style="background:#ef4444; width:0%;"></div></div><span id="prob-mess-v">0%</span></div>
+        <div class="prob-row"><span style="color:#6ee7b7;">Calm</span><div class="prob-track"><div class="prob-fill" id="prob-stable" style="background:#10b981; width:0%;"></div></div><span id="prob-stable-v">0%</span></div>
+        <div class="prob-row"><span style="color:#fbbf24;">Concern</span><div class="prob-track"><div class="prob-fill" id="prob-middle" style="background:#f59e0b; width:0%;"></div></div><span id="prob-middle-v">0%</span></div>
+        <div class="prob-row"><span style="color:#fca5a5;">Anxious</span><div class="prob-track"><div class="prob-fill" id="prob-mess"   style="background:#ef4444; width:0%;"></div></div><span id="prob-mess-v">0%</span></div>
       </div>
     </div>
 
     <!-- RIGHT: respiration + controls -->
     <div class="resp-panel">
-      <div class="banner gray" id="banner">等待开始</div>
+      <div class="banner gray" id="banner">Waiting to start</div>
       <div class="controls">
-        <button id="startBtn">▶ Start</button>
+        <button id="startBtn">Start</button>
         <progress id="prog" value="0" max="300000"></progress>
         <span class="meta" id="meta">0:00 / 5:00</span>
-        <a id="download" class="dl" href="/download" style="display:none;">⬇ 下载 CSV</a>
+        <a id="download" class="dl" href="/download" style="display:none;">Download CSV</a>
       </div>
     </div>
   </div>
 
   <!-- Personal thresholds -->
   <div class="threshold-panel">
-    <div class="threshold-title">个人化阈值参考(基于 jie 的 stable/middle/mess 75 个窗口的 p10–p90 分位)</div>
+    <div class="threshold-title">Personalized threshold reference based on 75 jie windows across stable/middle/mess, p10-p90</div>
     <table class="thr" id="thr-table">
-      <thead><tr><th>状态</th><th>SCL (µS)</th><th>SCR /min</th><th>HR (bpm)</th><th>呼吸 CV</th></tr></thead>
+      <thead><tr><th>State</th><th>SCL (µS)</th><th>SCR /min</th><th>HR (bpm)</th><th>Respiration CV</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -302,7 +302,7 @@
   // Load thresholds
   fetch('/thresholds').then(r => r.json()).then(thr => {
     const tbody = document.querySelector('#thr-table tbody');
-    const map = { stable: '平静', middle: '心事', mess: '焦虑' };
+    const map = { stable: 'Calm', middle: 'Concern', mess: 'Anxious' };
     for (const c of ['stable','middle','mess']) {
       const t = thr[c];
       if (!t) continue;
@@ -310,10 +310,10 @@
       tr.className = c;
       tr.innerHTML = `
         <td>${c} (${map[c]})</td>
-        <td>${t.SCL_mean.p10.toFixed(2)} – ${t.SCL_mean.p90.toFixed(2)}</td>
-        <td>${t.SCR_rate.p10.toFixed(0)} – ${t.SCR_rate.p90.toFixed(0)}</td>
-        <td>${t.mean_HR.p10.toFixed(0)} – ${t.mean_HR.p90.toFixed(0)}</td>
-        <td>${t.resp_CV.p10.toFixed(2)} – ${t.resp_CV.p90.toFixed(2)}</td>
+        <td>${t.SCL_mean.p10.toFixed(2)} - ${t.SCL_mean.p90.toFixed(2)}</td>
+        <td>${t.SCR_rate.p10.toFixed(0)} - ${t.SCR_rate.p90.toFixed(0)}</td>
+        <td>${t.mean_HR.p10.toFixed(0)} - ${t.mean_HR.p90.toFixed(0)}</td>
+        <td>${t.resp_CV.p10.toFixed(2)} - ${t.resp_CV.p90.toFixed(2)}</td>
       `;
       tbody.appendChild(tr);
     }
@@ -327,18 +327,18 @@
     dl.style.display = 'none';
     buf.t.length = 0; buf.rip.length = 0; buf.ecg.length = 0; buf.eda.length = 0;
     clearStress();
-    setBanner('正在连接设备...', 'gray');
+    setBanner('Connecting to device...', 'gray');
 
     try {
       const r = await fetch('/start', { method: 'POST' });
       const j = await r.json();
       if (!j.ok) {
-        setBanner('启动失败:' + (j.msg || ''), 'red');
+        setBanner('Start failed:' + (j.msg || ''), 'red');
         startBtn.disabled = false;
         return;
       }
     } catch (e) {
-      setBanner('启动失败:' + e, 'red');
+      setBanner('Start failed:' + e, 'red');
       startBtn.disabled = false;
       return;
     }
@@ -355,20 +355,20 @@
         case 'stress': updateStress(m); break;
         case 'ping': updateMeta(m.samples); break;
         case 'done':
-          setBanner('✅ 采集完成 — CSV 已保存', 'green');
+          setBanner('Acquisition complete - CSV saved', 'green');
           dl.href = '/download'; dl.style.display = 'inline-block';
           if (redrawTimer) { clearInterval(redrawTimer); redrawTimer = null; }
           redraw();
           startBtn.disabled = false;
           break;
         case 'error':
-          setBanner('❌ 错误:' + m.msg, 'red');
+          setBanner('Error:' + m.msg, 'red');
           if (redrawTimer) { clearInterval(redrawTimer); redrawTimer = null; }
           startBtn.disabled = false;
           break;
       }
     };
-    ws.onerror = () => setBanner('WebSocket 错误', 'red');
+    ws.onerror = () => setBanner('WebSocket error', 'red');
     redrawTimer = setInterval(redraw, 200);
   });
 </script>

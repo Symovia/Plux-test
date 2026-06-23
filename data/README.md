@@ -1,10 +1,10 @@
-# data/
+﻿# data/
 
-每个 CSV 是一次 5 分钟、1000 Hz、3 通道的采集。
+Each CSV is one five-minute, 1000 Hz, three-channel acquisition.
 
-## 列格式
+## Column Format
 
-```
+```text
 nSeq,t_sec,RIP,ECG,EDA
 0,0.0000,38612,33284,5692
 1,0.0010,38620,33260,5754
@@ -12,26 +12,26 @@ nSeq,t_sec,RIP,ECG,EDA
 299999,299.9990,...
 ```
 
-- `nSeq` — 设备帧号 0..299999
-- `t_sec` — 秒数 0.0000..299.9990
-- `RIP` — 呼吸带 ADC(整数,任意尺度)
-- `ECG` — 心电 ADC(整数,任意尺度)
-- `EDA` — 皮电 ADC(16-bit;µS 换算:`(ADC/65536) × 3.0 / 0.12`)
+- `nSeq`: device frame number, usually 0..299999
+- `t_sec`: time in seconds, usually 0.0000..299.9990
+- `RIP`: respiration belt ADC value, raw integer scale
+- `ECG`: electrocardiogram ADC value, raw integer scale
+- `EDA`: electrodermal activity ADC value, 16-bit; approximate microsiemens conversion is `(ADC / 65536) * 3.0 / 0.12`
 
-## 文件夹
+## Folders
 
+```text
+jie/         three conditions for subject jie
+|-- stable.csv    calm baseline
+|-- middle.csv    concern / mild tension
+`-- mess.csv      anxious / messy state
+
+ziqi/        same three-condition structure for subject ziqi; lower signal quality, kept for comparison only
+|-- stable.csv
+|-- middle.csv
+`-- mess.csv
 ```
-jie/         被试 jie 三条件
-├── stable.csv    平静
-├── 中.csv         心事(脚本里 alias 到 "middle")
-└── 乱.csv         焦虑(脚本里 alias 到 "mess")
 
-ziqi/        被试 ziqi 三条件(数据质量较差,仅供对比参考)
-├── stable.csv
-├── middle.csv
-└── mess.csv
-```
+## Using Your Own Data
 
-## 用自己的数据
-
-把你自己的 CSV 按上面的格式放到 `data/yourname/{stable,middle,mess}.csv`,然后改 analysis 脚本里的 subject 列表(`SUBJECTS = [...]`)即可。
+Place your own CSV files in `data/yourname/{stable,middle,mess}.csv` using the same column format, then update the subject list in the analysis scripts, for example `SUBJECTS = [...]`.

@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>生理信号艺术可视化 — jie</title>
+  <title>Physiological Signal Art Visualization - jie</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -125,13 +125,13 @@
 <div id="stage">
 
   <div class="top">
-    <div class="title">生理信号艺术可视化 · 5 通道动画 · jie</div>
+    <div class="title">Physiological Signal Art Visualization | 5-channel animation | jie</div>
     <div class="conds" id="conds"></div>
   </div>
 
   <div class="main">
     <canvas id="viz"></canvas>
-    <div class="hint" id="hint">背景 = 疲劳 · 形状边缘 = 专注 · 色相 = 心脏年龄 · 弧线流畅 = 协调 · 弹动 = 弹性</div>
+    <div class="hint" id="hint">Background = fatigue | edge detail = focus | hue = heart age | arc smoothness = coherence | bounce = resilience</div>
 
     <div class="panel" id="panel">
       <!-- gauges injected by JS -->
@@ -139,19 +139,19 @@
   </div>
 
   <div class="bottom">
-    <button class="btn" id="playBtn">▶ Play</button>
+    <button class="btn" id="playBtn">Play</button>
     <div class="time-row">
       <input type="range" id="scrub" min="0" max="300" value="0">
     </div>
     <div class="meta" id="timeText">t = 0 s / 300 s</div>
     <div class="speed">
-      速度
+      Speed
       <select id="speed">
-        <option value="0.25">0.25×</option>
-        <option value="0.5">0.5×</option>
-        <option value="1" selected>1×</option>
-        <option value="2">2×</option>
-        <option value="4">4×</option>
+        <option value="0.25">0.25x</option>
+        <option value="0.5">0.5x</option>
+        <option value="1" selected>1x</option>
+        <option value="2">2x</option>
+        <option value="4">4x</option>
       </select>
     </div>
   </div>
@@ -161,11 +161,11 @@
 <script>
 // ============== Data + state ==============
 const METRICS = [
-  { key: 'fatigue',    name: '① 疲劳度',      min: 0,  max: 100, color: '#a78bfa' },
-  { key: 'focus',      name: '② 专注度',      min: 0,  max: 100, color: '#22d3ee' },
-  { key: 'heart_age',  name: '③ 心脏年龄',    min: 0,  max: 50,  color: '#f472b6' },
-  { key: 'coherence',  name: '④ 协调度',      min: 0,  max: 100, color: '#86efac' },
-  { key: 'resilience', name: '⑤ 弹性',        min: 0,  max: 100, color: '#fcd34d' },
+  { key: 'fatigue',    name: '1. Fatigue',      min: 0,  max: 100, color: '#a78bfa' },
+  { key: 'focus',      name: '2. Focus',      min: 0,  max: 100, color: '#22d3ee' },
+  { key: 'heart_age',  name: '3. Heart age',    min: 0,  max: 50,  color: '#f472b6' },
+  { key: 'coherence',  name: '4. Coherence',      min: 0,  max: 100, color: '#86efac' },
+  { key: 'resilience', name: '5. Resilience',        min: 0,  max: 100, color: '#fcd34d' },
 ];
 
 const COND_COLORS = {
@@ -173,7 +173,7 @@ const COND_COLORS = {
   middle: '#f59e0b',
   mess:   '#ef4444',
 };
-const COND_CN = { stable: '平静', middle: '心事', mess: '焦虑' };
+const COND_CN = { stable: 'Calm', middle: 'Concern', mess: 'Anxious' };
 
 let currentCond = 'stable';
 let tracks = null;        // array of {t_sec, fatigue, focus, ...}
@@ -209,7 +209,7 @@ async function loadConditions() {
   const r = await fetch('/api/conditions').then(r => r.json());
   for (const c of r.conditions) {
     const b = document.createElement('button');
-    b.textContent = `${c} · ${COND_CN[c] || c}`;
+    b.textContent = `${c} | ${COND_CN[c] || c}`;
     b.dataset.cond = c;
     b.addEventListener('click', () => switchCond(c));
     condEl.appendChild(b);
@@ -267,13 +267,13 @@ function drawScene(vals) {
   const h = canvas.height / (window.devicePixelRatio || 1);
   const cx = w / 2, cy = h / 2;
 
-  // Background overlay — fatigue darkens
+  // Background overlay - fatigue darkens
   ctx.fillStyle = `rgba(5, 6, 8, ${0.15 + vals.fatigue / 250})`;
   ctx.fillRect(0, 0, w, h);
 
-  // Color hue from heart age (15yr → 320 pink, 40yr → 200 blue)
+  // Color hue from heart age (15yr -> 320 pink, 40yr -> 200 blue)
   const ageNorm = Math.max(0, Math.min(1, (vals.heart_age - 10) / 35));
-  const hue = 330 - ageNorm * 130;  // 330 (warm) → 200 (cool)
+  const hue = 330 - ageNorm * 130;  // 330 (warm) -> 200 (cool)
   const sat = 70 + vals.coherence * 0.2;
   const lit = 50 - vals.fatigue * 0.15;
 
@@ -371,7 +371,7 @@ function updateGauges(vals, idx) {
   METRICS.forEach(m => {
     const v = vals[m.key];
     const el = gaugeEls[m.key];
-    el.num.textContent = m.key === 'heart_age' ? `${v.toFixed(1)}岁` : v.toFixed(1);
+    el.num.textContent = m.key === 'heart_age' ? `${v.toFixed(1)}y` : v.toFixed(1);
     const pct = ((v - m.min) / (m.max - m.min)) * 100;
     el.fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
     // Sparkline = last 60 sec
@@ -412,7 +412,7 @@ requestAnimationFrame(loop);
 // ============== Controls ==============
 document.getElementById('playBtn').addEventListener('click', () => {
   playing = !playing;
-  document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+  document.getElementById('playBtn').textContent = playing ? 'Pause' : 'Play';
   lastTs = performance.now();
 });
 document.getElementById('scrub').addEventListener('input', (e) => {

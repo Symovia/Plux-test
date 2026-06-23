@@ -8,7 +8,7 @@ Outputs:
   jie_report/tracks_middle.csv
   jie_report/tracks_mess.csv
   jie_report/tracks_combined.csv (900 rows, with condition col)
-  jie_report/tracks_overview.png (5 metrics × 3 conditions overlay)
+  jie_report/tracks_overview.png (5 metrics x 3 conditions overlay)
 """
 import sys
 from pathlib import Path
@@ -38,12 +38,12 @@ FS = 1000
 WIN_SEC = 60
 DURATION_SEC = 300
 CONDS = ["stable", "middle", "mess"]
-CN = {"stable": "平静", "middle": "心事", "mess": "焦虑"}
+CN = {"stable": "Calm", "middle": "Concern", "mess": "Anxious"}
 COLORS = {"stable": "#10b981", "middle": "#f59e0b", "mess": "#ef4444"}
 FILE_ALIASES = {
-    "stable": ["stable.csv", "稳.csv"],
-    "middle": ["middle.csv", "中.csv"],
-    "mess":   ["mess.csv", "乱.csv"],
+    "stable": ["stable.csv"],
+    "middle": ["middle.csv"],
+    "mess":   ["mess.csv"],
 }
 
 
@@ -213,14 +213,14 @@ def main():
               f"coherence={d['coherence'].mean():.1f}, "
               f"resilience={d['resilience'].mean():.1f}")
 
-    # ---------- Visualization: 5 metrics × 3 conditions overlay ----------
+    # ---------- Visualization: 5 metrics x 3 conditions overlay ----------
     metrics = ["fatigue", "focus", "heart_age", "coherence", "resilience"]
     labels = {
-        "fatigue": "① 疲劳度 (0-100)",
-        "focus": "② 专注度 (0-100)",
-        "heart_age": "③ 心脏年龄 (岁)",
-        "coherence": "④ 协调度 (0-100)",
-        "resilience": "⑤ 弹性 (0-100)",
+        "fatigue": "1. Fatigue (0-100)",
+        "focus": "2. Focus (0-100)",
+        "heart_age": "3. Heart age (y)",
+        "coherence": "4. Coherence (0-100)",
+        "resilience": "5. Resilience (0-100)",
     }
     fig, axes = plt.subplots(5, 1, figsize=(15, 11), sharex=True)
     for ax, m in zip(axes, metrics):
@@ -232,8 +232,8 @@ def main():
         ax.grid(True, alpha=0.3)
         ax.axvline(WIN_SEC, color="#999", ls="--", lw=0.6, alpha=0.5)
     axes[0].legend(loc="upper right", fontsize=9, ncol=3)
-    axes[-1].set_xlabel("时间 (s) — 前 60s 为窗口预热(数据相同)")
-    axes[0].set_title("jie 三条件 × 5 个艺术可视化轨迹(1-s 分辨率)",
+    axes[-1].set_xlabel("Time (s) - first 60 s are warm-up windows")
+    axes[0].set_title("jie: three conditions x five art-visualization tracks, 1-s resolution",
                       fontsize=13, fontweight="bold")
     fig.tight_layout()
     out_png = OUT / "tracks_overview.png"

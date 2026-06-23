@@ -1,6 +1,6 @@
 """Comprehensive stress-gradient physiological report for jie.
 
-Analyzes 3 conditions (stable / middle / mess = 平静 / 心事 / 焦虑):
+Analyzes 3 conditions: stable, middle, and mess.
   - ECG  -> R-peaks -> HR, HRV time-domain (SDNN/RMSSD/pNN50), freq-domain (LF/HF)
   - EDA  -> tonic (SCL) + phasic (SCR) decomposition, SCR detection
   - RIP  -> breath detection, rate, regularity, amplitude
@@ -34,7 +34,7 @@ OUT.mkdir(exist_ok=True)
 
 FS = 1000
 CONDS = ["stable", "middle", "mess"]
-CN = {"stable": "平静", "middle": "心事", "mess": "焦虑"}
+CN = {"stable": "Calm", "middle": "Concern", "mess": "Anxious"}
 COLORS = {"stable": "#10b981", "middle": "#f59e0b", "mess": "#ef4444"}
 
 
@@ -226,7 +226,7 @@ def run():
         ax = fig.add_subplot(gs[0, i])
         ax.plot(t, r["signal_lp"], lw=0.6, color=col)
         ax.plot(r["peaks"] / FS, r["signal_lp"][r["peaks"]], "v", ms=4, mfc="white", mec=col)
-        ax.set_title(f"{c} — {CN[c]}", fontsize=13, fontweight="bold", color=col)
+        ax.set_title(f"{c} - {CN[c]}", fontsize=13, fontweight="bold", color=col)
         ax.set_ylabel("RIP (centered)")
         ax.grid(True, alpha=0.3)
 
@@ -263,12 +263,12 @@ def run():
 
     bar_axes[1].bar(conditions_labels, [results[c]["ecg"]["rmssd"] for c in CONDS],
                     color=colors_list)
-    bar_axes[1].set_title("RMSSD (ms) — higher = more parasympathetic")
+    bar_axes[1].set_title("RMSSD (ms) - higher = more parasympathetic")
     bar_axes[1].grid(True, axis="y", alpha=0.3)
 
     bar_axes[2].bar(conditions_labels, [results[c]["ecg"]["lf_hf"] for c in CONDS],
                     color=colors_list)
-    bar_axes[2].set_title("LF/HF ratio — higher = more sympathetic")
+    bar_axes[2].set_title("LF/HF ratio - higher = more sympathetic")
     bar_axes[2].grid(True, axis="y", alpha=0.3)
 
     # Row 5: more bars + stress index
@@ -292,7 +292,7 @@ def run():
     bar_axes2[2].grid(True, axis="y", alpha=0.3)
     bar_axes2[2].axhline(0, color="#666", lw=0.8)
 
-    fig.suptitle("jie — Stress Gradient Physiological Report  (5min × 3 conditions)",
+    fig.suptitle("jie - Stress Gradient Physiological Report  (5min x 3 conditions)",
                  fontsize=15, fontweight="bold", y=0.995)
     out_png = OUT / "jie_stress_report.png"
     fig.savefig(out_png, dpi=110, bbox_inches="tight")

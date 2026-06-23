@@ -31,7 +31,7 @@ FS = 1000
 WIN_SEC = 60
 STRIDE_SEC = 5
 CONDS = ["stable", "middle", "mess"]
-CN = {"stable": "平静", "middle": "心事", "mess": "焦虑"}
+CN = {"stable": "Calm", "middle": "Concern", "mess": "Anxious"}
 COLORS = {"stable": "#10b981", "middle": "#f59e0b", "mess": "#ef4444"}
 
 bundle = load(MODELS / "jie_classifier.joblib")
@@ -201,9 +201,9 @@ def main():
                    c=COLORS[c], s=18, zorder=3, alpha=0.9)
     ax.set_xlim(0, boundaries[-1])
     ax.set_ylim(-2, 102)
-    ax.set_ylabel("压力分 (0-100)")
-    ax.set_xlabel("时间(三条件拼接,共 15 分钟)")
-    ax.set_title("整体压力轨迹 — 蓝线 = 连续压力分,圆点颜色 = 离散预测类别",
+    ax.set_ylabel("Stress score (0-100)")
+    ax.set_xlabel("Time, three conditions concatenated, total 15 min")
+    ax.set_title("Overall stress trajectory: blue line = continuous score, dot color = predicted class",
                  fontsize=12, fontweight="bold")
     ax.grid(True, alpha=0.3)
 
@@ -215,13 +215,13 @@ def main():
         ps = d["p_stable"].values
         pm = d["p_middle"].values
         pme = d["p_mess"].values
-        ax.fill_between(t, 0, ps, color=COLORS["stable"], label="P(平静)", alpha=0.85)
-        ax.fill_between(t, ps, ps + pm, color=COLORS["middle"], label="P(心事)", alpha=0.85)
-        ax.fill_between(t, ps + pm, ps + pm + pme, color=COLORS["mess"], label="P(焦虑)", alpha=0.85)
+        ax.fill_between(t, 0, ps, color=COLORS["stable"], label="P(Calm)", alpha=0.85)
+        ax.fill_between(t, ps, ps + pm, color=COLORS["middle"], label="P(Concern)", alpha=0.85)
+        ax.fill_between(t, ps + pm, ps + pm + pme, color=COLORS["mess"], label="P(Anxious)", alpha=0.85)
         ax.set_xlim(t[0], t[-1])
         ax.set_ylim(0, 1)
-        ax.set_ylabel("概率")
-        ax.set_title(f"{c} ({CN[c]}) — 类别概率随时间", fontsize=10)
+        ax.set_ylabel("Probability")
+        ax.set_title(f"{c} ({CN[c]}) - class probability over time", fontsize=10)
         ax.grid(True, alpha=0.2)
         if i == 0:
             ax.legend(loc="center right", fontsize=8, framealpha=0.9)
@@ -232,14 +232,14 @@ def main():
         d = trajs[c]
         ax.plot(d["t_sec"], d["SCL"], color=COLORS[c], lw=1.7,
                 label=f"{c} ({CN[c]})")
-    ax.set_xlabel("时间 within 5-min (s)")
+    ax.set_xlabel("Time within 5-min (s)")
     ax.set_ylabel("SCL (µS)")
-    ax.set_title("EDA 基线 SCL 三条件叠加(看是否单调上升)", fontsize=10)
+    ax.set_title("EDA baseline SCL overlay across three conditions", fontsize=10)
     ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
 
     fig.suptitle(
-        "jie 离线压力分析 — 60s 窗口 / 5s 步长 / 已训分类器",
+        "jie offline stress analysis - 60-s windows / 5-s stride / trained classifier",
         fontsize=14, fontweight="bold")
 
     out_png = OUT / "jie_stress_timeline.png"

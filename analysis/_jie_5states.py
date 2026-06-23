@@ -1,10 +1,10 @@
 """5 physiological state estimators for jie's 3 CSVs:
 
-  1. Fatigue index           — combo of HRV/HR/EDA suggesting low arousal + parasympathetic
-  2. Cognitive load index    — mental engagement signature (LF/HF up, breath shallow)
-  3. Autonomic / heart age   — HRV-derived biological age (log-fit norms)
-  4. Cardiopulmonary coherence — HR ↔ breath synchronization (RSA strength)
-  5. Stress recovery time    — half-life of EDA SCR events (smaller = faster recovery)
+  1. Fatigue index           - combo of HRV/HR/EDA suggesting low arousal + parasympathetic
+  2. Cognitive load index    - mental engagement signature (LF/HF up, breath shallow)
+  3. Autonomic / heart age   - HRV-derived biological age (log-fit norms)
+  4. Cardiopulmonary coherence - HR <-> breath synchronization (RSA strength)
+  5. Stress recovery time    - half-life of EDA SCR events (smaller = faster recovery)
 """
 import sys
 from pathlib import Path
@@ -30,13 +30,13 @@ OUT = REPO_ROOT / "output"
 OUT.mkdir(exist_ok=True)
 FS = 1000
 CONDS = ["stable", "middle", "mess"]
-CN = {"stable": "平静", "middle": "心事", "mess": "焦虑"}
+CN = {"stable": "Calm", "middle": "Concern", "mess": "Anxious"}
 COLORS = {"stable": "#10b981", "middle": "#f59e0b", "mess": "#ef4444"}
 # Try English filename first, fall back to Chinese rename
 FILE_ALIASES = {
-    "stable": ["stable.csv", "稳.csv", "平静.csv"],
-    "middle": ["middle.csv", "中.csv", "心事.csv"],
-    "mess":   ["mess.csv", "乱.csv", "焦虑.csv"],
+    "stable": ["stable.csv", "stable.csv", "Calm.csv"],
+    "middle": ["middle.csv", "middle.csv", "Concern.csv"],
+    "mess":   ["mess.csv", "mess.csv", "Anxious.csv"],
 }
 
 
@@ -108,24 +108,24 @@ def rip_stats(rip, fs=FS):
 def state1_fatigue(hrv, eda_tonic, rip):
     """Higher = more fatigued. Parasympathetic dominance + low arousal."""
     # Rough z-anchors from typical resting adult population
-    z_RMSSD = (hrv["RMSSD"] - 35) / 20      # high RMSSD → fatigue-like
-    z_HR = (hrv["HR"] - 72) / 10            # low HR → fatigue
-    z_SCL = (eda_tonic.mean() - 4) / 2      # low SCL → fatigue
-    z_resp = (rip["rate"] - 14) / 4         # slow breath → fatigue
+    z_RMSSD = (hrv["RMSSD"] - 35) / 20      # high RMSSD -> fatigue-like
+    z_HR = (hrv["HR"] - 72) / 10            # low HR -> fatigue
+    z_SCL = (eda_tonic.mean() - 4) / 2      # low SCL -> fatigue
+    z_resp = (rip["rate"] - 14) / 4         # slow breath -> fatigue
     score = z_RMSSD - z_HR - z_SCL - z_resp
     return float(score)
 
 
 def state2_cognitive(hrv, eda_phasic, rip, fs=FS):
     """Higher = more cognitive engagement (focus without strong emotion)."""
-    # SCRs from phasic — but use small ones (focus has tiny SCRs)
+    # SCRs from phasic - but use small ones (focus has tiny SCRs)
     scr_peaks, props = find_peaks(eda_phasic, distance=int(fs * 1.0),
                                   prominence=0.02, height=0.03)
     scr_amp = float(np.mean(props.get("peak_heights",
                                        [0]))) if len(scr_peaks) else 0
-    z_LFHF = (hrv["LF_HF"] - 1.5) / 1.0     # high LF/HF → engagement
-    z_RMSSD = (hrv["RMSSD"] - 35) / 20      # lower RMSSD → engagement
-    z_resp_amp = (rip["amp_mean"] - 5000) / 3000  # shallow → engagement
+    z_LFHF = (hrv["LF_HF"] - 1.5) / 1.0     # high LF/HF -> engagement
+    z_RMSSD = (hrv["RMSSD"] - 35) / 20      # lower RMSSD -> engagement
+    z_resp_amp = (rip["amp_mean"] - 5000) / 3000  # shallow -> engagement
     # large SCRs penalize (suggests emotion not focus)
     z_scr = (scr_amp - 0.05) / 0.05
     score = z_LFHF - z_RMSSD - z_resp_amp - z_scr
@@ -135,8 +135,8 @@ def state2_cognitive(hrv, eda_phasic, rip, fs=FS):
 def state3_heart_age(sdnn, rmssd):
     """Estimate biological age from HRV (log-fit population norms)."""
     # Population norms (rough log fits to literature):
-    #   SDNN(age) ≈ 130 * exp(-0.018 * age)   -> ln(130/SDNN)/0.018
-    #   RMSSD(age) ≈ 80 * exp(-0.020 * age)
+    #   SDNN(age) approx. 130 * exp(-0.018 * age)   -> ln(130/SDNN)/0.018
+    #   RMSSD(age) approx. 80 * exp(-0.020 * age)
     age_sdnn = float(np.log(130 / max(sdnn, 1)) / 0.018)
     age_rmssd = float(np.log(80 / max(rmssd, 1)) / 0.020)
     return {
@@ -147,7 +147,7 @@ def state3_heart_age(sdnn, rmssd):
 
 
 def state4_coherence(rip, ecg, fs=FS):
-    """Cardiopulmonary coherence — peak coherence in respiratory band (0.1-0.4 Hz).
+    """Cardiopulmonary coherence - peak coherence in respiratory band (0.1-0.4 Hz).
     Higher = breath & HR strongly synchronized (RSA / coherence)."""
     rpeaks, rr_ms = get_rr(ecg, fs)
     if len(rr_ms) < 8:
@@ -260,8 +260,8 @@ def main():
     vals = [r["fatigue_idx"] for r in rows_summary]
     bars = ax.bar(cond_lbl, vals, color=color_list)
     ax.axhline(0, color="#666", lw=0.5)
-    ax.set_title("①  疲劳指数(↑ = 越疲劳)", fontweight="bold")
-    ax.set_ylabel("z 综合")
+    ax.set_title("1.  Fatigue index(higher = more fatigue-like)", fontweight="bold")
+    ax.set_ylabel("z composite")
     ax.grid(True, axis="y", alpha=0.3)
     for b, v in zip(bars, vals):
         ax.text(b.get_x() + b.get_width() / 2,
@@ -273,8 +273,8 @@ def main():
     vals = [r["cog_load_idx"] for r in rows_summary]
     bars = ax.bar(cond_lbl, vals, color=color_list)
     ax.axhline(0, color="#666", lw=0.5)
-    ax.set_title("②  认知负荷指数(↑ = 越投入认知)", fontweight="bold")
-    ax.set_ylabel("z 综合")
+    ax.set_title("2.  Cognitive-load index(higher = stronger cognitive load)", fontweight="bold")
+    ax.set_ylabel("z composite")
     ax.grid(True, axis="y", alpha=0.3)
     for b, v in zip(bars, vals):
         ax.text(b.get_x() + b.get_width() / 2,
@@ -285,11 +285,11 @@ def main():
     ax = fig.add_subplot(gs[0, 2])
     ages = [r["heart_age"] for r in rows_summary]
     bars = ax.bar(cond_lbl, ages, color=color_list)
-    ax.set_title("③  自主神经年龄(基于 HRV)", fontweight="bold")
-    ax.set_ylabel("估算年龄(岁)")
+    ax.set_title("3.  Autonomic age(based on HRV)", fontweight="bold")
+    ax.set_ylabel("Estimated age(y)")
     ax.grid(True, axis="y", alpha=0.3)
     ax.axhline(np.mean(ages), color="#444", ls="--", lw=0.7,
-               label=f"均 {np.mean(ages):.1f} 岁")
+               label=f"mean {np.mean(ages):.1f} y")
     ax.legend(fontsize=8)
     for b, v in zip(bars, ages):
         ax.text(b.get_x() + b.get_width() / 2, v + 0.5,
@@ -300,8 +300,8 @@ def main():
     vals = [r["coh_peak"] for r in rows_summary]
     bars = ax.bar(cond_lbl, vals, color=color_list)
     ax.set_ylim(0, 1.05)
-    ax.set_title("④  心肺耦合 / RSA(↑ = HR 和呼吸越同步)", fontweight="bold")
-    ax.set_ylabel("峰值 coherence")
+    ax.set_title("4.  Cardio-respiratory coupling / RSA, higher means HR and respiration are more synchronized", fontweight="bold")
+    ax.set_ylabel("Peak coherence")
     ax.grid(True, axis="y", alpha=0.3)
     for b, v in zip(bars, vals):
         ax.text(b.get_x() + b.get_width() / 2, v + 0.02,
@@ -313,12 +313,12 @@ def main():
         ax.plot(s4["f"], s4["Cxy"], color=COLORS[c],
                 lw=1.7, label=f"{c} ({CN[c]})")
     ax.axvspan(0.1, 0.45, color="#aaa", alpha=0.15,
-               label="呼吸带 0.1-0.45 Hz")
+               label="RIP belt 0.1-0.45 Hz")
     ax.set_xlim(0, 0.6)
     ax.set_ylim(0, 1)
-    ax.set_xlabel("频率 (Hz)")
+    ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Coherence")
-    ax.set_title("RR ↔ 呼吸 频率域耦合谱", fontsize=10)
+    ax.set_title("RR-respiration frequency-domain coupling spectrum", fontsize=10)
     ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
 
@@ -326,18 +326,18 @@ def main():
     ax = fig.add_subplot(gs[1, 2])
     ax.axis("off")
     note = (
-        "解读速查:\n\n"
-        "① 疲劳: 心事/焦虑都不疲劳;\n"
-        "  平静最接近疲劳态(但不算)\n\n"
-        "② 认知: 心事 > 焦虑 > 平静\n"
-        "  '有心事' 是真正的认知占用\n\n"
-        "③ 心脏年龄: 三态都很年轻\n"
-        "  焦虑 HRV 反弹让年龄'更年轻'\n"
-        "  → 看 stable 的值最可靠\n\n"
-        "④ Coherence: 看曲线峰位置\n"
-        "  对齐呼吸频率 = 真正的耦合\n\n"
-        "⑤ 恢复时间: SCR 半衰期\n"
-        "  焦虑态 SCR 多,可统计")
+        "Interpretation quick guide:\n\n"
+        "1. Fatigue: Concern and Anxious are not fatigue-like;\n"
+        "  Calm is closest to fatigue-like physiology, but still not fatigue\n\n"
+        "2. Cognition: Concern > Anxious > Calm\n"
+        "  'Concern' is the strongest cognitive load\n\n"
+        "3. Heart age: all three states look young by this metric\n"
+        "  Anxious HRV rebound makes age look 'younger'\n"
+        "  -> stable is the most reliable reference\n\n"
+        "4. Coherence: look at the peak position\n"
+        "  Alignment with respiration frequency indicates real coupling\n\n"
+        "5. Recovery time: SCR half-life\n"
+        "  The Anxious state has more SCR events and can be summarized")
     ax.text(0, 1, note, va="top", fontsize=10,
             family="ui-monospace, Consolas, monospace")
 
@@ -356,21 +356,21 @@ def main():
         ax.scatter(x, y, c=COLORS[c], s=50, alpha=0.7,
                    edgecolor="white", lw=0.5, zorder=3,
                    label=f"{c} ({CN[c]}): n={len(y)},  "
-                         f"中位={np.median(y):.1f}s,  "
-                         f"均={np.mean(y):.1f}s")
+                         f"median={np.median(y):.1f}s,  "
+                         f"mean={np.mean(y):.1f}s")
         if y:
             ax.axhline(np.median(y), color=COLORS[c], ls="--", lw=0.7,
                        xmin=(x_offset) / 100, xmax=(x_offset + len(y)) / 100,
                        alpha=0.6)
         x_offset += max(len(y), 1) + 3
-    ax.set_xlabel("SCR 事件序号(按条件分段)")
-    ax.set_ylabel("半衰期 (s)")
-    ax.set_title("⑤  应激恢复速度 — 每个 SCR 事件下降到 50% 用时(↓ = 恢复越快)",
+    ax.set_xlabel("SCR event index, grouped by condition")
+    ax.set_ylabel("half-life (s)")
+    ax.set_title("5. Stress recovery speed - time for each SCR event to decay to 50%; lower is faster",
                  fontweight="bold")
     ax.legend(fontsize=9, loc="upper left")
     ax.grid(True, alpha=0.3)
 
-    fig.suptitle("jie 5-状态生理推断报告(基于 3 份现有 CSV,无需新采集)",
+    fig.suptitle("jie five-state physiological inference report based on three existing CSV files, no new acquisition needed",
                  fontsize=15, fontweight="bold", y=0.995)
 
     out_png = OUT / "jie_5states.png"

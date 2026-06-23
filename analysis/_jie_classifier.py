@@ -43,7 +43,7 @@ FS = 1000
 WIN_SEC = 60
 STRIDE_SEC = 10
 CONDS = ["stable", "middle", "mess"]
-CN = {"stable": "平静", "middle": "心事", "mess": "焦虑"}
+CN = {"stable": "Calm", "middle": "Concern", "mess": "Anxious"}
 COLORS = {"stable": "#10b981", "middle": "#f59e0b", "mess": "#ef4444"}
 STATE_NUM = {c: i for i, c in enumerate(CONDS)}
 
@@ -158,7 +158,7 @@ def main():
     scaler = StandardScaler()
     Xs = scaler.fit_transform(X)
 
-    # === Stratified k-fold CV (optimistic — adjacent windows overlap) ===
+    # === Stratified k-fold CV (optimistic - adjacent windows overlap) ===
     rf = RandomForestClassifier(n_estimators=300, max_depth=8,
                                 random_state=42, class_weight="balanced")
     lr = LogisticRegression(max_iter=2000, C=1.0)
@@ -218,7 +218,7 @@ def main():
                    edgecolor="white", lw=0.5)
     ax.set_xlabel(f"PC1 ({pca.explained_variance_ratio_[0]*100:.0f}%)")
     ax.set_ylabel(f"PC2 ({pca.explained_variance_ratio_[1]*100:.0f}%)")
-    ax.set_title("PCA: 60s 窗口在 11 维特征空间的投影")
+    ax.set_title("PCA: 60-s windows projected from the 11-feature space")
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
 
@@ -232,7 +232,7 @@ def main():
     ax.set_yticklabels([f"{c}\n{CN[c]}" for c in CONDS])
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
-    ax.set_title(f"k-fold CV 混淆矩阵\nacc = {rf_cv.mean():.1%}")
+    ax.set_title(f"k-fold CV confusion matrix\nacc = {rf_cv.mean():.1%}")
     for i in range(3):
         for j in range(3):
             ax.text(j, i, f"{cm_cv[i,j]}\n{cm_norm[i,j]:.0%}",
@@ -250,7 +250,7 @@ def main():
     ax.set_yticklabels([f"{c}\n{CN[c]}" for c in CONDS])
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
-    ax.set_title(f"时序拆分混淆矩阵 (前70%训,后30%测)\nacc = {acc_temp:.1%}")
+    ax.set_title(f"Temporal split confusion matrix: first 70% train, last 30% test\nacc = {acc_temp:.1%}")
     for i in range(3):
         for j in range(3):
             ax.text(j, i, f"{cm_temp[i,j]}\n{cm_t_norm[i,j]:.0%}",
@@ -266,7 +266,7 @@ def main():
     ax.set_yticklabels(fi.index)
     ax.invert_yaxis()
     ax.set_xlabel("Importance (Gini)")
-    ax.set_title("特征重要性 (Random Forest)")
+    ax.set_title("Feature importance: Random Forest")
     ax.grid(True, axis="x", alpha=0.3)
     for bar, v in zip(bars, fi.values):
         ax.text(v + 0.003, bar.get_y() + bar.get_height() / 2,
@@ -285,8 +285,8 @@ def main():
         ax.grid(True, axis="y", alpha=0.3)
 
     fig.suptitle(
-        f"jie 三分类压力状态分类器 — "
-        f"{len(df)} 个 60s 窗口,RF k-fold={rf_cv.mean():.1%}, temporal={acc_temp:.1%}",
+        f"jie three-class stress-state classifier - "
+        f"{len(df)} 60-s windows,RF k-fold={rf_cv.mean():.1%}, temporal={acc_temp:.1%}",
         fontsize=14, fontweight="bold")
     out_png = OUT / "jie_classifier.png"
     fig.savefig(out_png, dpi=110, bbox_inches="tight")

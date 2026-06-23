@@ -9,7 +9,7 @@ Adds to base acquisition:
 import asyncio
 import sys
 
-# Windows: force SelectorEventLoop — ProactorEventLoop breaks uvicorn's WS impl.
+# Windows: force SelectorEventLoop - ProactorEventLoop breaks uvicorn's WS impl.
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -73,12 +73,12 @@ if CLF_PATH.exists():
     CLF_MODEL = BUNDLE["model"]
     CLF_SCALER = BUNDLE["scaler"]
     CLF_FEATURES = BUNDLE["feature_cols"]
-    # Use clf.classes_ (alphabetical), NOT bundle["classes"] — sklearn reorders
+    # Use clf.classes_ (alphabetical), NOT bundle["classes"] - sklearn reorders
     CLF_CLASSES = list(CLF_MODEL.classes_)
     print(f"[server] loaded classifier ({len(CLF_FEATURES)} feats, classes={CLF_CLASSES})")
 else:
     BUNDLE = None
-    print("[server] no classifier — running without stress prediction")
+    print("[server] no classifier - running without stress prediction")
 
 if THR_PATH.exists():
     with open(THR_PATH, "r", encoding="utf-8") as f:
@@ -92,9 +92,9 @@ state = {
     "samples": 0,
     "loop": None,
     "queue": None,
-    "resp_text": "等待开始",
+    "resp_text": "Waiting to start",
     "resp_color": "gray",
-    "stress_text": "等待 60 秒后开始分类",
+    "stress_text": "Waiting for 60 seconds before classification",
     "stress_score": 0.0,
     "stress_class": "warming",
 }
@@ -174,7 +174,7 @@ def classify(feats):
     pred = max(prob_map, key=prob_map.get)
     weights = {"stable": 0.0, "middle": 50.0, "mess": 100.0}
     score = float(sum(prob_map.get(c, 0.0) * weights[c] for c in weights))
-    label_text = {"stable": "平静", "middle": "心事", "mess": "焦虑"}[pred]
+    label_text = {"stable": "Calm", "middle": "Concern", "mess": "Anxious"}[pred]
     color = {"stable": "green", "middle": "amber", "mess": "red"}[pred]
     return {
         "class": pred,
@@ -265,7 +265,7 @@ class Device(plux.SignalsDev):
 def compute_resp(rip_samples):
     n = len(rip_samples)
     if n < 10 * SAMPLE_RATE:
-        return {"text": f"采集中... ({n // SAMPLE_RATE}/10s 数据)", "color": "gray"}
+        return {"text": f"Collecting... ({n // SAMPLE_RATE}/10s of data)", "color": "gray"}
     x = np.fromiter(rip_samples, dtype=float)
     x = x - x.mean()
     sos = butter(3, 1.0, btype="low", fs=SAMPLE_RATE, output="sos")
@@ -273,13 +273,13 @@ def compute_resp(rip_samples):
     peaks, _ = find_peaks(x, distance=int(SAMPLE_RATE * 1.2),
                           prominence=x.std() * 0.4)
     if len(peaks) < 4:
-        return {"text": "呼吸周期不足,继续采集...", "color": "gray"}
+        return {"text": "Not enough breathing cycles; keep collecting...", "color": "gray"}
     intervals = np.diff(peaks) / SAMPLE_RATE
     cv = float(intervals.std() / intervals.mean())
     rate = float(60.0 / intervals.mean())
     if cv < CV_REGULAR:
-        return {"text": f"呼吸均匀 ({rate:.0f} 次/分,CV={cv:.2f})", "color": "green"}
-    return {"text": f"呼吸不均匀 ({rate:.0f} 次/分,CV={cv:.2f})", "color": "red"}
+        return {"text": f"Regular breathing ({rate:.0f} breaths/min,CV={cv:.2f})", "color": "green"}
+    return {"text": f"Irregular breathing ({rate:.0f} breaths/min,CV={cv:.2f})", "color": "red"}
 
 
 def acquire(q, loop):
@@ -327,11 +327,11 @@ async def thresholds():
 @app.post("/start")
 async def start():
     if state["running"]:
-        return {"ok": False, "msg": "已经在运行"}
+        return {"ok": False, "msg": "Already running"}
     state["running"] = True
     state["samples"] = 0
     state["csv_path"] = None
-    state["stress_text"] = "等待 60 秒后开始分类"
+    state["stress_text"] = "Waiting for 60 seconds before classification"
     state["stress_score"] = 0.0
     state["stress_class"] = "warming"
     state["loop"] = asyncio.get_running_loop()
